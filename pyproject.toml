@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "latgraph"
+version = "0.1.0"
+description = "Tools for exploring lattice geometry"
+requires-python = ">=3.11"
+
+dependencies = [
+    "numpy",
+    "plotly",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = [
+    "lattice_math",
+    "graph_lattices",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
