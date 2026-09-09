@@ -23,7 +23,8 @@ dev = [
 package-dir = {"" = "src"}
 py-modules = [
     "lattice_math",
-    "graph_lattices",
+    "graph",
+    "figure",
 ]
 
 [tool.ruff]

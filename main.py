@@ -1,5 +1,6 @@
 import numpy as np
 
+from figure import change_title
 from graph import *
 from lattice_math import Lattice
 

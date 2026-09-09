@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 import plotly.graph_objects as go
 
+from figure import new_figure, set_axes
 from lattice_math import Lattice
 
 
@@ -18,46 +19,39 @@ class PlotParams:
 params = PlotParams()
 
 
+
 def add_origin(
     fig: go.Figure,
     name: str = "Origin",
     marker_size: int = 9,
 ):
-    fig.add_trace(
-        go.Scatter(
-            x=[0],
-            y=[0],
-            mode="markers",
-            name=name,
-            marker={"size": marker_size},
-        )
+    add_point(
+        fig,
+        0,
+        0,
+        name=name,
+        marker_size=marker_size,
+        marker_color="black",
+        marker_line_color="#1f2328",
+        marker_line_width=2,
     )
-
-
-def change_title(
-    fig: go.Figure,
-    title: str = "Lattice",
-):
-    fig.update_layout(title=title)
-
 
 def add_lattice_points(
     fig: go.Figure,
     lattice: Lattice,
     radius: int = 4,
     name: str = "Lattice",
-    marker_size: int = 9,
+    marker_size: int = 7,
 ):
     pts = lattice.points(radius)
 
-    fig.add_trace(
-        go.Scatter(
-            x=pts[:, 0],
-            y=pts[:, 1],
-            mode="markers",
-            name=name,
-            marker={"size": marker_size},
-        )
+    add_points(
+        fig,
+        pts[:, 0],
+        pts[:, 1],
+        name=name,
+        marker_size=marker_size,
+        marker_color="#30343b",
     )
 
 
@@ -187,76 +181,21 @@ def add_fundamental_parallelogram(
     )
 
 
-def finish_2d(
-    fig: go.Figure,
-    title: str,
-    x_range=None,
-    y_range=None,
-):
-    fig.update_layout(
-        title={
-            "text": title,
-            "font": {
-                "family": 'Georgia, "Times New Roman", serif',
-                "size": 22,
-                "color": "#1f2328",
-            },
-        },
-        template="plotly_white",
-        hovermode="closest",
-        legend={
-            "orientation": "h",
-            "font": {
-                "family": 'Georgia, "Times New Roman", serif',
-                "size": 13,
-                "color": "#666",
-            },
-        },
-        margin={"l": 40, "r": 40, "t": 70, "b": 40},
-        font={
-            "family": 'Georgia, "Times New Roman", serif',
-            "color": "#1f2328",
-        },
-        width=780,
-        height=780,
-    )
-    fig.update_xaxes(
-        zeroline=True,
-        zerolinecolor="#999",
-        showgrid=True,
-        gridcolor="#e8e8e8",
-        tickfont={"color": "#666"},
-        range=x_range,
-    )
-
-    fig.update_yaxes(
-        zeroline=True,
-        zerolinecolor="#999",
-        showgrid=True,
-        gridcolor="#e8e8e8",
-        tickfont={"color": "#666"},
-        range=x_range,
-        scaleanchor="x",
-        scaleratio=1,
-    )
-    return fig
-
-
 def plot_lattice(
     lattice: Lattice,
     radius: int = 4,
     title: str = "Lattice",
 ):
-    fig = go.Figure()
-
-    add_lattice_points(fig, lattice, radius=radius)
-
-    return finish_2d(
+    fig = new_figure(title)
+    set_axes(
         fig,
-        title,
         lattice.x_range(radius),
         lattice.y_range(radius),
     )
+
+    add_lattice_points(fig, lattice, radius=radius)
+
+    return fig
 
 
 def plot_parent_and_sublattice(
@@ -273,7 +212,15 @@ def plot_parent_and_sublattice(
     """
     sub = parent.sublattice(A)
 
-    fig = go.Figure()
+    primitive = parent.is_primitive_sublattice(A)
+    subtitle = "primitive" if primitive else "not primitive"
+
+    fig = new_figure(f"{title} — {subtitle}")
+    set_axes(
+        fig,
+        x_range=[-6, 6],
+        y_range=[-6, 6],
+    )
 
     add_lattice_points(
         fig,
@@ -301,16 +248,7 @@ def plot_parent_and_sublattice(
     if show_span and sub.rank == 1:
         add_rank1_span(fig, sub.basis[:, 0], name="span(L')")
 
-    primitive = parent.is_primitive_sublattice(A)
-
-    subtitle = "primitive" if primitive else "not primitive"
-
-    return finish_2d(
-        fig,
-        f"{title} — {subtitle}",
-        x_range=[-6, 6],
-        y_range=[-6, 6],
-    )
+    return fig
 
 
 def plot_primal_and_dual(
@@ -320,7 +258,8 @@ def plot_primal_and_dual(
 ):
     dual = lattice.dual
 
-    fig = go.Figure()
+    fig = new_figure(title)
+    set_axes(fig)
 
     add_lattice_points(
         fig,
@@ -352,4 +291,4 @@ def plot_primal_and_dual(
         labels=["b1*", "b2*"],
     )
 
-    return finish_2d(fig, title)
+    return fig
