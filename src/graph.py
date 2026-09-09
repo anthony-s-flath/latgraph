@@ -61,7 +61,7 @@ def add_lattice_points(
     )
 
 
-def basis_label_position(
+def basis_label_offset(
     lattice: Lattice,
     vector,
     radius: int,
@@ -74,16 +74,10 @@ def basis_label_position(
     x_span = x_range[1] - x_range[0]
     y_span = y_range[1] - y_range[0]
 
-    offset = params.label_padding * min(x_span, y_span)
+    x_offset = params.label_padding * x_span * np.sign(b[0])
+    y_offset = params.label_padding * y_span * np.sign(b[1])
 
-    norm = np.linalg.norm(b)
-
-    if norm == 0:
-        return b
-
-    direction = b / norm
-
-    return b + offset * direction
+    return x_offset, y_offset
 
 
 def add_basis_vectors(
@@ -116,15 +110,15 @@ def add_basis_vectors(
         )
 
         # Label a plot-relative distance beyond the vector endpoint
-        label_pos = basis_label_position(
+        x_offset, y_offset = basis_label_offset(
             lattice,
             b,
             radius,
         )
 
         fig.add_annotation(
-            x=float(label_pos[0]),
-            y=float(label_pos[1]),
+            x=float(b[0]) + x_offset,
+            y=float(b[1]) + y_offset,
             text=labels[i],
             showarrow=False,
             font={"size": 16},
@@ -223,8 +217,9 @@ def finish_2d(
             "family": 'Georgia, "Times New Roman", serif',
             "color": "#1f2328",
         },
+        width=780,
+        height=780,
     )
-
     fig.update_xaxes(
         zeroline=True,
         zerolinecolor="#999",
@@ -240,9 +235,10 @@ def finish_2d(
         showgrid=True,
         gridcolor="#e8e8e8",
         tickfont={"color": "#666"},
-        range=y_range,
+        range=x_range,
+        scaleanchor="x",
+        scaleratio=1,
     )
-
     return fig
 
 
@@ -258,8 +254,8 @@ def plot_lattice(
     return finish_2d(
         fig,
         title,
-        lattice.y_range(radius),
         lattice.x_range(radius),
+        lattice.y_range(radius),
     )
 
 
