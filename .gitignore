@@ -2,3 +2,5 @@ env
 *cpython*
 __pycache__
 blog
+out
+*.sh

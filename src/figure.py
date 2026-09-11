@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import plotly.graph_objects as go
 
 
@@ -18,15 +19,15 @@ class FigureStyle:
     height: int = 780
 
     title_size: int = 28
-    text_size: int = 18
-    tick_size: int = 14
-    legend_size: int = 14
-    label_size: int = 14
+    text_size: int = 28
+    tick_size: int = 18
+    legend_size: int = 24 
+    label_size: int = 22 
 
-    point_size: int = 7
-    emphasis_point_size: int = 10
-    secondary_point_size: int = 6
-    origin_point_size: int = 9
+    point_size: int = 10
+    emphasis_point_size: int = 14
+    secondary_point_size: int = 8
+    origin_point_size: int = 10
     origin_border_width: float = 2
 
     arrow_width: float = 1.6
@@ -41,11 +42,9 @@ class FigureStyle:
 style = FigureStyle()
 
 
-def new_figure(
-    title: str = "Lattice",
-) -> go.Figure:
+def new_figure(title: str = "Lattice", show_axis: bool = True) -> go.Figure:
     fig = go.Figure()
-    _style_2d(fig)
+    style_2d(fig)
     change_title(fig, title)
     return fig
 
@@ -68,6 +67,7 @@ def set_axes(
     fig: go.Figure,
     x_range=None,
     y_range=None,
+    showticklabels: bool = True,
     equal_range: bool = True,
 ):
     """
@@ -81,11 +81,12 @@ def set_axes(
         x_range = axis_range
         y_range = axis_range
 
-    fig.update_xaxes(range=x_range)
+    ticks = "outside" if showticklabels else ""
+    fig.update_xaxes(range=x_range, showticklabels=showticklabels, ticks=ticks)
     fig.update_yaxes(
         range=y_range,
-        scaleanchor="x",
-        scaleratio=1,
+        showticklabels=showticklabels,
+        ticks=ticks,
     )
 
 
@@ -181,10 +182,16 @@ def add_point(
 
 
 def add_arrow(
-    fig: go.Figure,
+    fig,
     start,
     end,
+    label=None,
+    label_t=0.5,
+    label_offset=(0.0, 0.0),
 ):
+    start = np.asarray(start, dtype=float)
+    end = np.asarray(end, dtype=float)
+
     fig.add_trace(
         go.Scatter(
             x=[float(start[0]), float(end[0])],
@@ -205,6 +212,16 @@ def add_arrow(
             zorder=-1,
         )
     )
+
+    if label is not None:
+        position = start + label_t * (end - start)
+
+        add_label(
+            fig,
+            position[0] + label_offset[0],
+            position[1] + label_offset[1],
+            label,
+        )
 
 
 def add_label(
@@ -274,7 +291,7 @@ def add_polygon(
     )
 
 
-def _style_2d(
+def style_2d(
     fig: go.Figure,
 ):
     fig.update_layout(

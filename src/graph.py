@@ -172,12 +172,14 @@ def plot_lattice(
     lattice: Lattice,
     radius: int = 4,
     title: str = "Lattice",
+    showticklabels: bool = True
 ):
     fig = new_figure(title)
     set_axes(
         fig,
         lattice.x_range(radius),
         lattice.y_range(radius),
+        showticklabels
     )
 
     add_lattice_points(fig, lattice, radius=radius)
