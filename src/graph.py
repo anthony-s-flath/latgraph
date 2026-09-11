@@ -5,43 +5,49 @@ from dataclasses import dataclass
 import numpy as np
 import plotly.graph_objects as go
 
-from figure import new_figure, set_axes
+from figure import (
+    add_arrow,
+    add_label,
+    add_line,
+    add_point,
+    add_points,
+    add_polygon,
+    new_figure,
+    set_axes,
+)
 from lattice_math import Lattice
 
 
 @dataclass
 class PlotParams:
     label_padding = 0.035
-    label_xshift = 5
-    label_yshift = 5
 
 
 params = PlotParams()
 
 
-
 def add_origin(
     fig: go.Figure,
     name: str = "Origin",
-    marker_size: int = 9,
+    marker_size: int | None = None,
 ):
     add_point(
         fig,
         0,
         0,
         name=name,
+        role="origin",
         marker_size=marker_size,
-        marker_color="black",
-        marker_line_color="#1f2328",
-        marker_line_width=2,
     )
+
 
 def add_lattice_points(
     fig: go.Figure,
     lattice: Lattice,
     radius: int = 4,
     name: str = "Lattice",
-    marker_size: int = 7,
+    role: str = "default",
+    marker_size: int | None = None,
 ):
     pts = lattice.points(radius)
 
@@ -50,8 +56,8 @@ def add_lattice_points(
         pts[:, 0],
         pts[:, 1],
         name=name,
+        role=role,
         marker_size=marker_size,
-        marker_color="#30343b",
     )
 
 
@@ -86,36 +92,23 @@ def add_basis_vectors(
     for i in range(lattice.rank):
         b = lattice.basis[:, i]
 
-        # Vector from origin to b_i
-        fig.add_annotation(
-            x=float(b[0]),
-            y=float(b[1]),
-            ax=0,
-            ay=0,
-            xref="x",
-            yref="y",
-            axref="x",
-            ayref="y",
-            showarrow=True,
-            arrowhead=2,
-            arrowsize=1.2,
-            arrowwidth=2,
-            text="",
+        add_arrow(
+            fig,
+            start=[0, 0],
+            end=b,
         )
 
-        # Label a plot-relative distance beyond the vector endpoint
         x_offset, y_offset = basis_label_offset(
             lattice,
             b,
             radius,
         )
 
-        fig.add_annotation(
-            x=float(b[0]) + x_offset,
-            y=float(b[1]) + y_offset,
-            text=labels[i],
-            showarrow=False,
-            font={"size": 16},
+        add_label(
+            fig,
+            float(b[0]) + x_offset,
+            float(b[1]) + y_offset,
+            labels[i],
         )
 
 
@@ -137,14 +130,12 @@ def add_rank1_span(
 
     u = v / norm
 
-    fig.add_trace(
-        go.Scatter(
-            x=[-extent * u[0], extent * u[0]],
-            y=[-extent * u[1], extent * u[1]],
-            mode="lines",
-            name=name,
-            line={"dash": "dash"},
-        )
+    add_line(
+        fig,
+        x=[-extent * u[0], extent * u[0]],
+        y=[-extent * u[1], extent * u[1]],
+        name=name,
+        dashed=True,
     )
 
 
@@ -169,15 +160,11 @@ def add_fundamental_parallelogram(
         ]
     )
 
-    fig.add_trace(
-        go.Scatter(
-            x=vertices[:, 0],
-            y=vertices[:, 1],
-            mode="lines",
-            fill="toself",
-            opacity=0.20,
-            name=name,
-        )
+    add_polygon(
+        fig,
+        x=vertices[:, 0],
+        y=vertices[:, 1],
+        name=name,
     )
 
 
@@ -227,7 +214,7 @@ def plot_parent_and_sublattice(
         parent,
         radius=radius,
         name="Parent lattice",
-        marker_size=8,
+        role="secondary",
     )
 
     add_lattice_points(
@@ -235,7 +222,7 @@ def plot_parent_and_sublattice(
         sub,
         radius=radius,
         name="Sublattice",
-        marker_size=13,
+        role="emphasis",
     )
 
     add_basis_vectors(
@@ -266,7 +253,6 @@ def plot_primal_and_dual(
         lattice,
         radius=radius,
         name="L",
-        marker_size=9,
     )
 
     add_lattice_points(
@@ -274,7 +260,7 @@ def plot_primal_and_dual(
         dual,
         radius=radius,
         name="L*",
-        marker_size=7,
+        role="secondary",
     )
 
     add_basis_vectors(

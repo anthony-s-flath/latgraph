@@ -1,8 +1,44 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import plotly.graph_objects as go
 
-FONT_FAMILY = 'Georgia, "Times New Roman", serif'
+
+@dataclass(frozen=True)
+class FigureStyle:
+    font_family: str = 'Georgia, "Times New Roman", serif'
+
+    foreground: str = "#1f2328"
+    muted: str = "#666"
+    axis: str = "#777"
+    grid: str = "#eeeeee"
+
+    width: int = 780
+    height: int = 780
+
+    title_size: int = 28
+    text_size: int = 18
+    tick_size: int = 14
+    legend_size: int = 14
+    label_size: int = 14
+
+    point_size: int = 7
+    emphasis_point_size: int = 10
+    secondary_point_size: int = 6
+    origin_point_size: int = 9
+    origin_border_width: float = 2
+
+    arrow_width: float = 1.6
+    arrow_size: float = 1.3
+
+    line_width: float = 1.2
+
+    polygon_line_width: float = 1
+    polygon_fill: str = "rgba(31, 35, 40, 0.06)"
+
+
+style = FigureStyle()
 
 
 def new_figure(
@@ -53,48 +89,75 @@ def set_axes(
     )
 
 
-def change_title(fig: go.Figure, title: str = "Lattice"):
+def change_title(
+    fig: go.Figure,
+    title: str = "Lattice",
+):
     fig.update_layout(
         title={
             "text": title,
             "x": 0,
             "xanchor": "left",
             "font": {
-                "family": FONT_FAMILY,
-                "size": 18,
-                "color": "#1f2328",
+                "family": style.font_family,
+                "size": style.title_size,
+                "color": style.foreground,
             },
         }
     )
+
+
+def _point_marker(
+    role: str,
+    marker_size: int | None = None,
+):
+    if role == "default":
+        return {
+            "size": marker_size or style.point_size,
+            "color": style.foreground,
+        }
+
+    if role == "emphasis":
+        return {
+            "size": marker_size or style.emphasis_point_size,
+            "color": style.foreground,
+        }
+
+    if role == "secondary":
+        return {
+            "size": marker_size or style.secondary_point_size,
+            "color": style.muted,
+        }
+
+    if role == "origin":
+        return {
+            "size": marker_size or style.origin_point_size,
+            "color": "white",
+            "line": {
+                "color": style.foreground,
+                "width": style.origin_border_width,
+            },
+        }
+
+    raise ValueError(f"Unknown point role: {role}")
+
 
 def add_points(
     fig: go.Figure,
     x,
     y,
     name: str = "Points",
-    marker_size: int = 7,
-    marker_color: str = "#30343b",
-    marker_line_color=None,
-    marker_line_width: float = 0,
+    role: str = "default",
+    marker_size: int | None = None,
 ):
-    marker = {
-        "size": marker_size,
-        "color": marker_color,
-    }
-
-    if marker_line_color is not None:
-        marker["line"] = {
-            "color": marker_line_color,
-            "width": marker_line_width,
-        }
-
     fig.add_trace(
         go.Scatter(
             x=x,
             y=y,
             mode="markers",
             name=name,
-            marker=marker,
+            marker=_point_marker(role, marker_size),
+            zorder=1,
         )
     )
 
@@ -104,21 +167,112 @@ def add_point(
     x: float,
     y: float,
     name: str = "Point",
-    marker_size: int = 7,
-    marker_color: str = "#30343b",
-    marker_line_color=None,
-    marker_line_width: float = 0,
+    role: str = "default",
+    marker_size: int | None = None,
 ):
     add_points(
         fig,
         [x],
         [y],
         name=name,
+        role=role,
         marker_size=marker_size,
-        marker_color=marker_color,
-        marker_line_color=marker_line_color,
-        marker_line_width=marker_line_width,
     )
+
+
+def add_arrow(
+    fig: go.Figure,
+    start,
+    end,
+):
+    fig.add_trace(
+        go.Scatter(
+            x=[float(start[0]), float(end[0])],
+            y=[float(start[1]), float(end[1])],
+            mode="lines+markers",
+            line={
+                "color": style.foreground,
+                "width": style.arrow_width,
+            },
+            marker={
+                "symbol": ["circle", "arrow"],
+                "size": [0, 10],
+                "color": style.foreground,
+                "angleref": "previous",
+            },
+            showlegend=False,
+            hoverinfo="skip",
+            zorder=-1,
+        )
+    )
+
+
+def add_label(
+    fig: go.Figure,
+    x: float,
+    y: float,
+    text: str,
+):
+    fig.add_annotation(
+        x=x,
+        y=y,
+        text=text,
+        showarrow=False,
+        font={
+            "family": style.font_family,
+            "size": style.label_size,
+            "color": style.foreground,
+        },
+    )
+
+
+def add_line(
+    fig: go.Figure,
+    x,
+    y,
+    name: str = "Line",
+    dashed: bool = False,
+):
+    line = {
+        "color": style.muted,
+        "width": style.line_width,
+    }
+
+    if dashed:
+        line["dash"] = "dash"
+
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=y,
+            mode="lines",
+            name=name,
+            line=line,
+        )
+    )
+
+
+def add_polygon(
+    fig: go.Figure,
+    x,
+    y,
+    name: str = "Polygon",
+):
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=y,
+            mode="lines",
+            name=name,
+            line={
+                "color": style.muted,
+                "width": style.polygon_line_width,
+            },
+            fill="toself",
+            fillcolor=style.polygon_fill,
+        )
+    )
+
 
 def _style_2d(
     fig: go.Figure,
@@ -136,9 +290,9 @@ def _style_2d(
             "yanchor": "bottom",
             "bgcolor": "rgba(0,0,0,0)",
             "font": {
-                "family": FONT_FAMILY,
-                "size": 12,
-                "color": "#555",
+                "family": style.font_family,
+                "size": style.legend_size,
+                "color": style.muted,
             },
         },
         margin={
@@ -148,30 +302,30 @@ def _style_2d(
             "b": 48,
         },
         font={
-            "family": FONT_FAMILY,
-            "size": 14,
-            "color": "#1f2328",
+            "family": style.font_family,
+            "size": style.text_size,
+            "color": style.foreground,
         },
-        width=780,
-        height=780,
+        width=style.width,
+        height=style.height,
     )
 
     axis_style = {
         "zeroline": True,
-        "zerolinecolor": "#777",
+        "zerolinecolor": style.axis,
         "zerolinewidth": 1,
         "showgrid": True,
-        "gridcolor": "#eeeeee",
+        "gridcolor": style.grid,
         "gridwidth": 1,
         "showline": False,
         "ticks": "outside",
         "ticklen": 4,
         "tickwidth": 1,
-        "tickcolor": "#777",
+        "tickcolor": style.axis,
         "tickfont": {
-            "family": FONT_FAMILY,
-            "size": 12,
-            "color": "#555",
+            "family": style.font_family,
+            "size": style.tick_size,
+            "color": style.muted,
         },
     }
 
