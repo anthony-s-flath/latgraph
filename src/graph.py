@@ -1,29 +1,17 @@
 from __future__ import annotations
 
 import numpy as np
-import plotly.graph_objects as go
 
-from figure import (
-    add_arrow,
-    add_label,
-    add_line,
-    add_point,
-    add_points,
-    add_polygon,
-    new_figure,
-    set_axes,
-)
+from figure import LatFigure
 from lattice_math import Lattice
-from style import LIGHT_STYLE, FigureStyle, resolve_style
 
 
 def add_origin(
-    fig: go.Figure,
+    fig: LatFigure,
     name: str = "Origin",
     marker_size: int | None = None,
 ):
-    add_point(
-        fig,
+    fig.add_point(
         0,
         0,
         name=name,
@@ -33,7 +21,7 @@ def add_origin(
 
 
 def add_lattice_points(
-    fig: go.Figure,
+    fig: LatFigure,
     lattice: Lattice,
     radius: int = 4,
     name: str = "Lattice",
@@ -42,8 +30,7 @@ def add_lattice_points(
 ):
     pts = lattice.points(radius)
 
-    add_points(
-        fig,
+    fig.add_points(
         pts[:, 0],
         pts[:, 1],
         name=name,
@@ -53,10 +40,10 @@ def add_lattice_points(
 
 
 def basis_label_offset(
+    fig: LatFigure,
     lattice: Lattice,
     vector,
     radius: int,
-    style: FigureStyle,
 ):
     b = np.asarray(vector, dtype=float)
 
@@ -66,41 +53,37 @@ def basis_label_offset(
     x_span = x_range[1] - x_range[0]
     y_span = y_range[1] - y_range[0]
 
-    x_offset = style.basis_label_padding * x_span * np.sign(b[0])
-    y_offset = style.basis_label_padding * y_span * np.sign(b[1])
+    x_offset = fig.style.basis_label_padding * x_span * np.sign(b[0])
+    y_offset = fig.style.basis_label_padding * y_span * np.sign(b[1])
 
     return x_offset, y_offset
 
 
 def add_basis_vectors(
-    fig: go.Figure,
+    fig: LatFigure,
     lattice: Lattice,
     radius: int = 4,
     labels=None,
 ):
-    style = resolve_style(fig)
-
     if labels is None:
         labels = [f"b{i + 1}" for i in range(lattice.rank)]
 
     for i in range(lattice.rank):
         b = lattice.basis[:, i]
 
-        add_arrow(
-            fig,
+        fig.add_arrow(
             start=[0, 0],
             end=b,
         )
 
         x_offset, y_offset = basis_label_offset(
+            fig,
             lattice,
             b,
             radius,
-            style,
         )
 
-        add_label(
-            fig,
+        fig.add_label(
             float(b[0]) + x_offset,
             float(b[1]) + y_offset,
             labels[i],
@@ -108,7 +91,7 @@ def add_basis_vectors(
 
 
 def add_rank1_span(
-    fig: go.Figure,
+    fig: LatFigure,
     vector,
     extent: float = 6.0,
     name: str = "span",
@@ -125,8 +108,7 @@ def add_rank1_span(
 
     u = v / norm
 
-    add_line(
-        fig,
+    fig.add_line(
         x=[-extent * u[0], extent * u[0]],
         y=[-extent * u[1], extent * u[1]],
         name=name,
@@ -135,7 +117,7 @@ def add_rank1_span(
 
 
 def add_fundamental_parallelogram(
-    fig: go.Figure,
+    fig: LatFigure,
     lattice: Lattice,
     name: str = "Fundamental parallelogram",
 ):
@@ -155,8 +137,7 @@ def add_fundamental_parallelogram(
         ]
     )
 
-    add_polygon(
-        fig,
+    fig.add_polygon(
         x=vertices[:, 0],
         y=vertices[:, 1],
         name=name,
@@ -168,17 +149,24 @@ def plot_lattice(
     radius: int = 4,
     title: str = "Lattice",
     showticklabels: bool = True,
-    style: FigureStyle = LIGHT_STYLE,
-):
-    fig = new_figure(title, style=style)
-    set_axes(
-        fig,
-        lattice.x_range(radius),
-        lattice.y_range(radius),
-        showticklabels
+    is_light: bool = True,
+) -> LatFigure:
+    fig = LatFigure(
+        title=title,
+        is_light=is_light,
     )
 
-    add_lattice_points(fig, lattice, radius=radius)
+    fig.set_axes(
+        lattice.x_range(radius),
+        lattice.y_range(radius),
+        showticklabels,
+    )
+
+    add_lattice_points(
+        fig,
+        lattice,
+        radius=radius,
+    )
 
     return fig
 
@@ -189,8 +177,8 @@ def plot_parent_and_sublattice(
     radius: int = 5,
     show_span: bool = True,
     title: str = "Parent lattice and sublattice",
-    style: FigureStyle = LIGHT_STYLE,
-):
+    is_light: bool = True,
+) -> LatFigure:
     """
     Plot L(B) together with the sublattice L(B A).
 
@@ -201,9 +189,12 @@ def plot_parent_and_sublattice(
     primitive = parent.is_primitive_sublattice(A)
     subtitle = "primitive" if primitive else "not primitive"
 
-    fig = new_figure(f"{title} — {subtitle}", style=style)
-    set_axes(
-        fig,
+    fig = LatFigure(
+        title=f"{title} — {subtitle}",
+        is_light=is_light,
+    )
+
+    fig.set_axes(
         x_range=[-6, 6],
         y_range=[-6, 6],
     )
@@ -228,11 +219,15 @@ def plot_parent_and_sublattice(
         fig,
         sub,
         radius=radius,
-        labels=[f"b'_{i+1}" for i in range(sub.rank)],
+        labels=[f"b'_{i + 1}" for i in range(sub.rank)],
     )
 
     if show_span and sub.rank == 1:
-        add_rank1_span(fig, sub.basis[:, 0], name="span(L')")
+        add_rank1_span(
+            fig,
+            sub.basis[:, 0],
+            name="span(L')",
+        )
 
     return fig
 
@@ -241,12 +236,14 @@ def plot_primal_and_dual(
     lattice: Lattice,
     radius: int = 4,
     title: str = "Primal and dual lattices",
-    style: FigureStyle = LIGHT_STYLE,
-):
+    is_light: bool = True,
+) -> LatFigure:
     dual = lattice.dual
 
-    fig = new_figure(title, style=style)
-    set_axes(fig)
+    fig = LatFigure(
+        title=title,
+        is_light=is_light,
+    )
 
     add_lattice_points(
         fig,
@@ -278,3 +275,21 @@ def plot_primal_and_dual(
     )
 
     return fig
+
+def add_ball(
+    self,
+    center,
+    radius: float,
+    role: str = "default",
+):
+    radius = abs(radius)
+    x, y = map(float, center)
+
+    self.fig.add_shape(
+        type="circle",
+        x0=x - radius,
+        x1=x + radius,
+        y0=y - radius,
+        y1=y + radius,
+        **self.style.ball(role),
+    )

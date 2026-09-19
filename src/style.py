@@ -1,22 +1,39 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import plotly.graph_objects as go
+import plotly.graph_objects as go
 
 
 @dataclass(frozen=True)
-class FigureStyle:
-    font_family: str = 'Georgia, "Times New Roman", serif'
-
+class LightColor:
     template: str = "plotly_white"
     background: str = "#ffffff"
     foreground: str = "#1f2328"
     muted: str = "#666"
     axis: str = "#777"
     grid: str = "#eeeeee"
+    polygon_fill: str = "rgba(31, 35, 40, 0.06)"
+    polygon_line: str = "rgba(31, 35, 40, 0.06)"
+    legend_background: str = "rgba(0,0,0,0)"
+
+
+@dataclass(frozen=True)
+class DarkColor:
+    template: str = "plotly_dark"
+    background: str = "#0d1117"
+    foreground: str = "#e6edf3"
+    muted: str = "#9da7b3"
+    axis: str = "#8b949e"
+    grid: str = "#30363d"
+    polygon_fill: str = "rgba(230, 237, 243, 0.06)"
+    polygon_line: str = "rgba(230, 237, 243, 0.06)"
+    legend_background: str = "rgba(0,0,0,0)"
+
+
+@dataclass
+class FigureStyle:
+    font_family: str = 'Georgia, "Times New Roman", serif'
 
     width: int = 780
     height: int = 780
@@ -42,7 +59,6 @@ class FigureStyle:
     line_width: float = 1.2
 
     polygon_line_width: float = 1
-    polygon_fill: str = "rgba(31, 35, 40, 0.06)"
 
     margin_left: int = 52
     margin_right: int = 20
@@ -60,7 +76,6 @@ class FigureStyle:
     legend_y: float = 1.01
     legend_x_anchor: str = "left"
     legend_y_anchor: str = "bottom"
-    legend_background: str = "rgba(0,0,0,0)"
 
     point_z_order: int = 1
     arrow_z_order: int = -1
@@ -81,12 +96,15 @@ class FigureStyle:
     arrow_label_t: float = 0.5
     arrow_label_offset: tuple[float, float] = (0.0, 0.0)
 
+    def __init__(self, is_light: bool = True):
+        self.color = LightColor() if is_light else DarkColor()
+
     def layout(self, *, height: int | None = None, show_legend: bool = True) -> dict:
         return {
-            "template": self.template,
+            "template": self.color.template,
             "hovermode": self.hover_mode,
-            "paper_bgcolor": self.background,
-            "plot_bgcolor": self.background,
+            "paper_bgcolor": self.color.background,
+            "plot_bgcolor": self.color.background,
             "showlegend": show_legend,
             "legend": {
                 "orientation": self.legend_orientation,
@@ -94,7 +112,7 @@ class FigureStyle:
                 "y": self.legend_y,
                 "xanchor": self.legend_x_anchor,
                 "yanchor": self.legend_y_anchor,
-                "bgcolor": self.legend_background,
+                "bgcolor": self.color.legend_background,
                 "font": self.legend_font(),
             },
             "margin": {
@@ -112,35 +130,35 @@ class FigureStyle:
         return {
             "family": self.font_family,
             "size": self.text_size,
-            "color": self.foreground,
+            "color": self.color.foreground,
         }
 
     def title_font(self) -> dict:
         return {
             "family": self.font_family,
             "size": self.title_size,
-            "color": self.foreground,
+            "color": self.color.foreground,
         }
 
     def label_font(self) -> dict:
         return {
             "family": self.font_family,
             "size": self.label_size,
-            "color": self.foreground,
+            "color": self.color.foreground,
         }
 
     def legend_font(self) -> dict:
         return {
             "family": self.font_family,
             "size": self.legend_size,
-            "color": self.muted,
+            "color": self.color.muted,
         }
 
     def tick_font(self) -> dict:
         return {
             "family": self.font_family,
             "size": self.tick_size,
-            "color": self.muted,
+            "color": self.color.muted,
         }
 
     def title(self, text: str) -> dict:
@@ -154,16 +172,16 @@ class FigureStyle:
     def axis_config(self) -> dict:
         return {
             "zeroline": True,
-            "zerolinecolor": self.axis,
+            "zerolinecolor": self.color.axis,
             "zerolinewidth": self.axis_zero_line_width,
             "showgrid": True,
-            "gridcolor": self.grid,
+            "gridcolor": self.color.grid,
             "gridwidth": self.axis_grid_width,
             "showline": False,
             "ticks": self.axis_ticks,
             "ticklen": self.axis_tick_length,
             "tickwidth": self.axis_tick_width,
-            "tickcolor": self.axis,
+            "tickcolor": self.color.axis,
             "tickfont": self.tick_font(),
         }
 
@@ -181,10 +199,10 @@ class FigureStyle:
             "origin": self.origin_point_size,
         }
         colors = {
-            "default": self.foreground,
-            "emphasis": self.foreground,
-            "secondary": self.muted,
-            "origin": self.background,
+            "default": self.color.foreground,
+            "emphasis": self.color.foreground,
+            "secondary": self.color.muted,
+            "origin": self.color.background,
         }
         if role not in sizes:
             raise ValueError(f"Unknown point role: {role}")
@@ -195,7 +213,7 @@ class FigureStyle:
         }
         if role == "origin":
             marker["line"] = {
-                "color": self.foreground,
+                "color": self.color.foreground,
                 "width": self.origin_border_width,
             }
         return marker
@@ -204,13 +222,13 @@ class FigureStyle:
         return {"zorder": self.point_z_order}
 
     def arrow_line(self) -> dict:
-        return {"color": self.foreground, "width": self.arrow_width}
+        return {"color": self.color.foreground, "width": self.arrow_width}
 
     def arrow_marker(self) -> dict:
         return {
             "symbol": ["circle", "arrow"],
             "size": [0, self.arrow_marker_size],
-            "color": self.foreground,
+            "color": self.color.foreground,
             "angleref": "previous",
         }
 
@@ -228,7 +246,7 @@ class FigureStyle:
 
     def line(self, *, dashed: bool = False, width: float | None = None) -> dict:
         line = {
-            "color": self.muted,
+            "color": self.color.muted,
             "width": self.line_width if width is None else width,
         }
         if dashed:
@@ -236,13 +254,13 @@ class FigureStyle:
         return line
 
     def polygon_line(self) -> dict:
-        return {"color": self.muted, "width": self.polygon_line_width}
+        return {"color": self.color.muted, "width": self.polygon_line_width}
 
     def polygon_trace(self) -> dict:
         return {
             "line": self.polygon_line(),
             "fill": "toself",
-            "fillcolor": self.polygon_fill,
+            "fillcolor": self.color.polygon_fill,
         }
 
     def number_line_x_axis(self, show_tick_labels: bool) -> dict:
@@ -269,17 +287,17 @@ class FigureStyle:
             "arrowhead": self.number_line_arrow_head,
             "arrowsize": self.number_line_arrow_size,
             "arrowwidth": self.line_width,
-            "arrowcolor": self.foreground,
+            "arrowcolor": self.color.foreground,
         }
 
     def number_line(self) -> dict:
-        return {"color": self.axis, "width": self.line_width}
+        return {"color": self.color.axis, "width": self.line_width}
 
     def interval_line(self, role: str, dashed: bool, width: float | None) -> dict:
         colors = {
-            "default": self.foreground,
-            "secondary": self.muted,
-            "axis": self.axis,
+            "default": self.color.foreground,
+            "secondary": self.color.muted,
+            "axis": self.color.axis,
         }
         if role not in colors:
             raise ValueError(f"Unknown line role: {role}")
@@ -293,7 +311,7 @@ class FigureStyle:
         return line
 
     def tick_line(self) -> dict:
-        return {"color": self.foreground, "width": self.line_width}
+        return {"color": self.color.foreground, "width": self.line_width}
 
     def number_line_marker(
         self,
@@ -305,7 +323,7 @@ class FigureStyle:
         color = line["color"]
         return {
             "size": marker_size or self.point_size,
-            "color": color if filled else self.background,
+            "color": color if filled else self.color.background,
             "line": line,
         }
 
@@ -315,42 +333,16 @@ class FigureStyle:
             "hoverinfo": self.hidden_hover_info,
         }
 
-
-@dataclass(frozen=True)
-class DarkFigureStyle(FigureStyle):
-    template: str = "plotly_dark"
-    background: str = "#0d1117"
-    foreground: str = "#e6edf3"
-    muted: str = "#9da7b3"
-    axis: str = "#8b949e"
-    grid: str = "#30363d"
-    polygon_fill: str = "rgba(230, 237, 243, 0.06)"
-
-
-LIGHT_STYLE = FigureStyle()
-DARK_STYLE = DarkFigureStyle()
-
-_STYLE_META_KEY = "latgraph_style"
-
-
-def bind_style(fig: go.Figure, style: FigureStyle) -> FigureStyle:
-    """Attach a style to a figure so later helpers inherit it."""
-    meta = dict(fig.layout.meta or {})
-    meta[_STYLE_META_KEY] = asdict(style)
-    fig.update_layout(meta=meta)
-    return style
-
-
-def resolve_style(
-    fig: go.Figure,
-    style: FigureStyle | None = None,
-) -> FigureStyle:
-    """Return an explicit, figure-bound, or default style, in that order."""
-    if style is not None:
-        return bind_style(fig, style)
-
-    meta = fig.layout.meta
-    if meta and _STYLE_META_KEY in meta:
-        return FigureStyle(**meta[_STYLE_META_KEY])
-
-    return bind_style(fig, LIGHT_STYLE)
+    def ball(
+        self,
+        role: str = "default",
+    ):
+        return {
+            "line": {
+                "color": self.color.polygon_line,
+                "width": 2,
+            },
+            "fillcolor": self.color.polygon_fill,
+            "opacity": 0.15,
+            "layer": "below",
+        }

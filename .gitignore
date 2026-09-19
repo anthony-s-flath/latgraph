@@ -1,8 +1,0 @@
-env
-*cpython*
-__pycache__
-blog
-out
-*.sh
-*.egg*
-*tar.gz
