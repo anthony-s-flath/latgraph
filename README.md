@@ -12,6 +12,7 @@ A small Python library for graphing lattices and related concepts with Plotly.
 
 * `src/graph.py` — lattice-specific graphing functions
 * `src/figure.py` — Plotly helpers and styling
+* `src/number_line.py` — one-dimensional number-line helpers
 * `main.py` — examples
 
 ## Customization

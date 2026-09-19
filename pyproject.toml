@@ -26,6 +26,7 @@ py-modules = [
     "lattice_math",
     "graph",
     "figure",
+    "number_line",
 ]
 
 [tool.ruff]

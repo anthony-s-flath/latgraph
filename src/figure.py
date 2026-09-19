@@ -21,8 +21,8 @@ class FigureStyle:
     title_size: int = 28
     text_size: int = 28
     tick_size: int = 18
-    legend_size: int = 24 
-    label_size: int = 22 
+    legend_size: int = 24
+    label_size: int = 22
 
     point_size: int = 10
     emphasis_point_size: int = 14
