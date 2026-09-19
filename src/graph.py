@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import numpy as np
 import plotly.graph_objects as go
 
@@ -16,14 +14,7 @@ from figure import (
     set_axes,
 )
 from lattice_math import Lattice
-
-
-@dataclass
-class PlotParams:
-    label_padding = 0.035
-
-
-params = PlotParams()
+from style import LIGHT_STYLE, FigureStyle, resolve_style
 
 
 def add_origin(
@@ -65,6 +56,7 @@ def basis_label_offset(
     lattice: Lattice,
     vector,
     radius: int,
+    style: FigureStyle,
 ):
     b = np.asarray(vector, dtype=float)
 
@@ -74,8 +66,8 @@ def basis_label_offset(
     x_span = x_range[1] - x_range[0]
     y_span = y_range[1] - y_range[0]
 
-    x_offset = params.label_padding * x_span * np.sign(b[0])
-    y_offset = params.label_padding * y_span * np.sign(b[1])
+    x_offset = style.basis_label_padding * x_span * np.sign(b[0])
+    y_offset = style.basis_label_padding * y_span * np.sign(b[1])
 
     return x_offset, y_offset
 
@@ -86,6 +78,8 @@ def add_basis_vectors(
     radius: int = 4,
     labels=None,
 ):
+    style = resolve_style(fig)
+
     if labels is None:
         labels = [f"b{i + 1}" for i in range(lattice.rank)]
 
@@ -102,6 +96,7 @@ def add_basis_vectors(
             lattice,
             b,
             radius,
+            style,
         )
 
         add_label(
@@ -172,9 +167,10 @@ def plot_lattice(
     lattice: Lattice,
     radius: int = 4,
     title: str = "Lattice",
-    showticklabels: bool = True
+    showticklabels: bool = True,
+    style: FigureStyle = LIGHT_STYLE,
 ):
-    fig = new_figure(title)
+    fig = new_figure(title, style=style)
     set_axes(
         fig,
         lattice.x_range(radius),
@@ -193,6 +189,7 @@ def plot_parent_and_sublattice(
     radius: int = 5,
     show_span: bool = True,
     title: str = "Parent lattice and sublattice",
+    style: FigureStyle = LIGHT_STYLE,
 ):
     """
     Plot L(B) together with the sublattice L(B A).
@@ -204,7 +201,7 @@ def plot_parent_and_sublattice(
     primitive = parent.is_primitive_sublattice(A)
     subtitle = "primitive" if primitive else "not primitive"
 
-    fig = new_figure(f"{title} — {subtitle}")
+    fig = new_figure(f"{title} — {subtitle}", style=style)
     set_axes(
         fig,
         x_range=[-6, 6],
@@ -244,10 +241,11 @@ def plot_primal_and_dual(
     lattice: Lattice,
     radius: int = 4,
     title: str = "Primal and dual lattices",
+    style: FigureStyle = LIGHT_STYLE,
 ):
     dual = lattice.dual
 
-    fig = new_figure(title)
+    fig = new_figure(title, style=style)
     set_axes(fig)
 
     add_lattice_points(

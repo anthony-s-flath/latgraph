@@ -1,50 +1,21 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import numpy as np
 import plotly.graph_objects as go
 
+from style import LIGHT_STYLE, FigureStyle, resolve_style
 
-@dataclass(frozen=True)
-class FigureStyle:
-    font_family: str = 'Georgia, "Times New Roman", serif'
-
-    foreground: str = "#1f2328"
-    muted: str = "#666"
-    axis: str = "#777"
-    grid: str = "#eeeeee"
-
-    width: int = 780
-    height: int = 780
-
-    title_size: int = 28
-    text_size: int = 28
-    tick_size: int = 18
-    legend_size: int = 24
-    label_size: int = 22
-
-    point_size: int = 10
-    emphasis_point_size: int = 14
-    secondary_point_size: int = 8
-    origin_point_size: int = 10
-    origin_border_width: float = 2
-
-    arrow_width: float = 1.6
-    arrow_size: float = 1.3
-
-    line_width: float = 1.2
-
-    polygon_line_width: float = 1
-    polygon_fill: str = "rgba(31, 35, 40, 0.06)"
+# Backwards-compatible alias. New code should pass a style to a figure constructor.
+style = LIGHT_STYLE
 
 
-style = FigureStyle()
-
-
-def new_figure(title: str = "Lattice", show_axis: bool = True) -> go.Figure:
+def new_figure(
+    title: str = "Lattice",
+    show_axis: bool = True,
+    style: FigureStyle = LIGHT_STYLE,
+) -> go.Figure:
     fig = go.Figure()
-    style_2d(fig)
+    style_2d(fig, style)
     change_title(fig, title)
     return fig
 
@@ -81,66 +52,30 @@ def set_axes(
         x_range = axis_range
         y_range = axis_range
 
-    ticks = "outside" if showticklabels else ""
-    fig.update_xaxes(range=x_range, showticklabels=showticklabels, ticks=ticks)
+    style = resolve_style(fig)
+    visibility = style.axis_visibility(showticklabels)
+    fig.update_xaxes(range=x_range, **visibility)
     fig.update_yaxes(
         range=y_range,
-        showticklabels=showticklabels,
-        ticks=ticks,
+        **visibility,
     )
 
 
 def change_title(
     fig: go.Figure,
     title: str = "Lattice",
+    style: FigureStyle | None = None,
 ):
-    fig.update_layout(
-        title={
-            "text": title,
-            "x": 0,
-            "xanchor": "left",
-            "font": {
-                "family": style.font_family,
-                "size": style.title_size,
-                "color": style.foreground,
-            },
-        }
-    )
+    style = resolve_style(fig, style)
+    fig.update_layout(title=style.title(title))
 
 
 def _point_marker(
+    style: FigureStyle,
     role: str,
     marker_size: int | None = None,
 ):
-    if role == "default":
-        return {
-            "size": marker_size or style.point_size,
-            "color": style.foreground,
-        }
-
-    if role == "emphasis":
-        return {
-            "size": marker_size or style.emphasis_point_size,
-            "color": style.foreground,
-        }
-
-    if role == "secondary":
-        return {
-            "size": marker_size or style.secondary_point_size,
-            "color": style.muted,
-        }
-
-    if role == "origin":
-        return {
-            "size": marker_size or style.origin_point_size,
-            "color": "white",
-            "line": {
-                "color": style.foreground,
-                "width": style.origin_border_width,
-            },
-        }
-
-    raise ValueError(f"Unknown point role: {role}")
+    return style.point_marker(role, marker_size)
 
 
 def add_points(
@@ -150,15 +85,17 @@ def add_points(
     name: str = "Points",
     role: str = "default",
     marker_size: int | None = None,
+    style: FigureStyle | None = None,
 ):
+    style = resolve_style(fig, style)
     fig.add_trace(
         go.Scatter(
             x=x,
             y=y,
             mode="markers",
             name=name,
-            marker=_point_marker(role, marker_size),
-            zorder=1,
+            marker=_point_marker(style, role, marker_size),
+            **style.point_trace(),
         )
     )
 
@@ -170,6 +107,7 @@ def add_point(
     name: str = "Point",
     role: str = "default",
     marker_size: int | None = None,
+    style: FigureStyle | None = None,
 ):
     add_points(
         fig,
@@ -178,6 +116,7 @@ def add_point(
         name=name,
         role=role,
         marker_size=marker_size,
+        style=style,
     )
 
 
@@ -186,9 +125,13 @@ def add_arrow(
     start,
     end,
     label=None,
-    label_t=0.5,
-    label_offset=(0.0, 0.0),
+    label_t: float | None = None,
+    label_offset=None,
+    style: FigureStyle | None = None,
 ):
+    style = resolve_style(fig, style)
+    label_t = style.arrow_label_t if label_t is None else label_t
+    label_offset = style.arrow_label_offset if label_offset is None else label_offset
     start = np.asarray(start, dtype=float)
     end = np.asarray(end, dtype=float)
 
@@ -197,25 +140,12 @@ def add_arrow(
             x=[float(start[0]), float(end[0])],
             y=[float(start[1]), float(end[1])],
             mode="lines+markers",
-            line={
-                "color": style.foreground,
-                "width": style.arrow_width,
-            },
-            marker={
-                "symbol": ["circle", "arrow"],
-                "size": [0, 10],
-                "color": style.foreground,
-                "angleref": "previous",
-            },
-            showlegend=False,
-            hoverinfo="skip",
-            zorder=-1,
+            **style.arrow_trace(),
         )
     )
 
     if label is not None:
         position = start + label_t * (end - start)
-
         add_label(
             fig,
             position[0] + label_offset[0],
@@ -229,17 +159,14 @@ def add_label(
     x: float,
     y: float,
     text: str,
+    style: FigureStyle | None = None,
 ):
+    style = resolve_style(fig, style)
     fig.add_annotation(
         x=x,
         y=y,
         text=text,
-        showarrow=False,
-        font={
-            "family": style.font_family,
-            "size": style.label_size,
-            "color": style.foreground,
-        },
+        **style.label_annotation(),
     )
 
 
@@ -249,22 +176,16 @@ def add_line(
     y,
     name: str = "Line",
     dashed: bool = False,
+    style: FigureStyle | None = None,
 ):
-    line = {
-        "color": style.muted,
-        "width": style.line_width,
-    }
-
-    if dashed:
-        line["dash"] = "dash"
-
+    style = resolve_style(fig, style)
     fig.add_trace(
         go.Scatter(
             x=x,
             y=y,
             mode="lines",
             name=name,
-            line=line,
+            line=style.line(dashed=dashed),
         )
     )
 
@@ -274,77 +195,25 @@ def add_polygon(
     x,
     y,
     name: str = "Polygon",
+    style: FigureStyle | None = None,
 ):
+    style = resolve_style(fig, style)
     fig.add_trace(
         go.Scatter(
             x=x,
             y=y,
             mode="lines",
             name=name,
-            line={
-                "color": style.muted,
-                "width": style.polygon_line_width,
-            },
-            fill="toself",
-            fillcolor=style.polygon_fill,
+            **style.polygon_trace(),
         )
     )
 
 
 def style_2d(
     fig: go.Figure,
+    style: FigureStyle = LIGHT_STYLE,
 ):
-    fig.update_layout(
-        template="plotly_white",
-        hovermode="closest",
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        legend={
-            "orientation": "h",
-            "x": 0,
-            "y": 1.01,
-            "xanchor": "left",
-            "yanchor": "bottom",
-            "bgcolor": "rgba(0,0,0,0)",
-            "font": {
-                "family": style.font_family,
-                "size": style.legend_size,
-                "color": style.muted,
-            },
-        },
-        margin={
-            "l": 52,
-            "r": 20,
-            "t": 55,
-            "b": 48,
-        },
-        font={
-            "family": style.font_family,
-            "size": style.text_size,
-            "color": style.foreground,
-        },
-        width=style.width,
-        height=style.height,
-    )
-
-    axis_style = {
-        "zeroline": True,
-        "zerolinecolor": style.axis,
-        "zerolinewidth": 1,
-        "showgrid": True,
-        "gridcolor": style.grid,
-        "gridwidth": 1,
-        "showline": False,
-        "ticks": "outside",
-        "ticklen": 4,
-        "tickwidth": 1,
-        "tickcolor": style.axis,
-        "tickfont": {
-            "family": style.font_family,
-            "size": style.tick_size,
-            "color": style.muted,
-        },
-    }
-
-    fig.update_xaxes(**axis_style)
-    fig.update_yaxes(**axis_style)
+    style = resolve_style(fig, style)
+    fig.update_layout(**style.layout())
+    fig.update_xaxes(**style.axis_config())
+    fig.update_yaxes(**style.axis_config())

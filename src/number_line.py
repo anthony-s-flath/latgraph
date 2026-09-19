@@ -1,27 +1,18 @@
-from __future__ import annotations
+
 
 import plotly.graph_objects as go
 
-from figure import add_label, change_title, style
+from figure import add_label, change_title
+from style import LIGHT_STYLE, FigureStyle, resolve_style
 
-NUMBER_LINE_HEIGHT = 280
-
-
-def _role_color(role: str) -> str:
-    if role == "default":
-        return style.foreground
-    if role == "secondary":
-        return style.muted
-    if role == "axis":
-        return style.axis
-    raise ValueError(f"Unknown line role: {role}")
 
 def plot_number_line(
     x_range,
     title: str = "",
     showticklabels: bool = False,
     show_axis_arrow: bool = True,
-    y_range=(-0.3, 0.3),
+    y_range=None,
+    style: FigureStyle = LIGHT_STYLE,
 ) -> go.Figure:
     """Create a one-dimensional number-line figure."""
     start, end = map(float, x_range)
@@ -30,97 +21,63 @@ def plot_number_line(
         raise ValueError("x_range must satisfy start < end.")
 
     fig = go.Figure()
+    style = resolve_style(fig, style)
+    y_range = style.number_line_y_range if y_range is None else y_range
 
-    fig.update_layout(
-        template="plotly_white",
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        showlegend=False,
-        margin={"l": 52, "r": 20, "t": 55, "b": 48},
-        font={
-            "family": style.font_family,
-            "size": style.text_size,
-            "color": style.foreground,
-        },
-        width=style.width,
-        height=NUMBER_LINE_HEIGHT,
-    )
+    fig.update_layout(**style.layout(height=style.number_line_height, show_legend=False))
 
     change_title(fig, title)
 
     fig.update_xaxes(
         range=[start, end],
-        showgrid=False,
-        zeroline=False,
-        showline=False,
-        showticklabels=showticklabels,
-        ticks="outside" if showticklabels else "",
-        tickfont={
-            "family": style.font_family,
-            "size": style.tick_size,
-            "color": style.muted,
-        },
-        fixedrange=True,
+        **style.number_line_x_axis(showticklabels),
     )
 
     fig.update_yaxes(
         range=list(y_range),
-        visible=False,
-        fixedrange=True,
+        **style.number_line_y_axis(),
     )
 
-    add_number_line(
-        fig,
-        start,
-        end,
-    )
+    add_number_line(fig, start, end)
 
     if show_axis_arrow:
-        add_axis_arrow(
-            fig,
-            end,
-        )
+        add_axis_arrow(fig, end)
 
     return fig
+
 
 def add_axis_arrow(
     fig: go.Figure,
     x: float,
     y: float = 0.0,
+    style: FigureStyle | None = None,
 ):
     """Add a right-facing arrowhead to a number line."""
+    style = resolve_style(fig, style)
     fig.add_annotation(
         x=x,
         y=y,
-        ax=-20,
-        ay=0,
-        xref="x",
-        yref="y",
-        text="",
-        showarrow=True,
-        arrowhead=4,
-        arrowsize=5.2,
-        arrowwidth=style.line_width,
-        arrowcolor=style.foreground,
+        **style.number_line_arrow(),
     )
+
 
 def add_number_line(
     fig: go.Figure,
     start: float,
     end: float,
+    style: FigureStyle | None = None,
 ):
     """Draw the horizontal number line."""
+    style = resolve_style(fig, style)
     fig.add_shape(
         type="line",
         x0=start,
         x1=end,
         y0=0,
         y1=0,
-        line={
-            "color": style.axis,
-            "width": style.line_width,
-        },
+        line=style.number_line(),
     )
+
 
 def add_interval(
     fig: go.Figure,
@@ -128,38 +85,29 @@ def add_interval(
     end: float,
     label: str | None = None,
     y: float = 0.0,
-    label_offset: float = 0.18,
+    label_offset: float | None = None,
     role: str = "default",
     dashed: bool = False,
-    line_width: float = 6.0,
+    line_width: float | None = None,
+    style: FigureStyle | None = None,
 ):
     """Highlight an interval on the number line."""
     if start > end:
         raise ValueError("Interval must satisfy start <= end.")
 
-    line = {
-        "color": _role_color(role),
-        "width": line_width,
-    }
-    if dashed:
-        line["dash"] = "dash"
-
+    style = resolve_style(fig, style)
+    label_offset = style.interval_label_offset if label_offset is None else label_offset
     fig.add_shape(
         type="line",
         x0=start,
         x1=end,
         y0=y,
         y1=y,
-        line=line,
+        line=style.interval_line(role, dashed, line_width),
     )
 
     if label is not None:
-        add_label(
-            fig,
-            (start + end) / 2,
-            y + label_offset,
-            label,
-        )
+        add_label(fig, (start + end) / 2, y + label_offset, label)
 
 
 def add_tick(
@@ -167,29 +115,25 @@ def add_tick(
     x: float,
     label: str | None = None,
     y: float = 0.0,
-    height: float = 0.08,
-    label_offset: float = -0.16,
+    height: float | None = None,
+    label_offset: float | None = None,
+    style: FigureStyle | None = None,
 ):
     """Add a marked position to the number line."""
+    style = resolve_style(fig, style)
+    height = style.tick_height if height is None else height
+    label_offset = style.tick_label_offset if label_offset is None else label_offset
     fig.add_shape(
         type="line",
         x0=x,
         x1=x,
         y0=y - height,
         y1=y + height,
-        line={
-            "color": style.foreground,
-            "width": style.line_width,
-        },
+        line=style.tick_line(),
     )
 
     if label is not None:
-        add_label(
-            fig,
-            x,
-            y + label_offset,
-            label,
-        )
+        add_label(fig, x, y + label_offset, label)
 
 
 def add_number_line_point(
@@ -197,38 +141,26 @@ def add_number_line_point(
     x: float,
     label: str | None = None,
     y: float = 0.0,
-    label_offset: float = 0.16,
+    label_offset: float | None = None,
     role: str = "default",
     filled: bool = True,
     marker_size: int | None = None,
+    style: FigureStyle | None = None,
 ):
     """Add an open or closed point to the number line."""
-    color = _role_color(role)
-
-    marker = {
-        "size": marker_size or style.point_size,
-        "color": color if filled else "white",
-        "line": {
-            "color": color,
-            "width": style.origin_border_width,
-        },
-    }
-
+    style = resolve_style(fig, style)
+    label_offset = (
+        style.number_line_point_label_offset if label_offset is None else label_offset
+    )
     fig.add_trace(
         go.Scatter(
             x=[x],
             y=[y],
             mode="markers",
-            marker=marker,
-            showlegend=False,
-            hoverinfo="skip",
+            marker=style.number_line_marker(role, filled, marker_size),
+            **style.number_line_point_trace(),
         )
     )
 
     if label is not None:
-        add_label(
-            fig,
-            x,
-            y + label_offset,
-            label,
-        )
+        add_label(fig, x, y + label_offset, label)
